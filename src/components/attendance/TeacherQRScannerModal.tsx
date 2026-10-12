@@ -655,8 +655,8 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                   type="button"
                   onClick={() => setSummaryFilter('todos')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${summaryFilter === 'todos'
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                 >
                   Todos ({allSummaryList.length})
@@ -665,8 +665,8 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                   type="button"
                   onClick={() => setSummaryFilter('presentes')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${summaryFilter === 'presentes'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
                     }`}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
@@ -676,8 +676,8 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                   type="button"
                   onClick={() => setSummaryFilter('ausentes')}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${summaryFilter === 'ausentes'
-                      ? 'bg-rose-600 text-white shadow-xs'
-                      : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                    ? 'bg-rose-600 text-white shadow-xs'
+                    : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
                     }`}
                 >
                   <UserX className="w-3.5 h-3.5" />
@@ -1010,11 +1010,10 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                       setScanMode('continuous');
                     }}
                     aria-pressed={scanMode === 'continuous'}
-                    className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-colors cursor-pointer ${
-                      scanMode === 'continuous'
-                        ? 'bg-emerald-600 border-emerald-500 text-white shadow-md'
-                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
-                    }`}
+                    className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-colors cursor-pointer ${scanMode === 'continuous'
+                      ? 'bg-emerald-600 border-emerald-500 text-white shadow-md'
+                      : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+                      }`}
                   >
                     Modo Continuo (Múltiples alumnos)
                   </button>
@@ -1025,11 +1024,10 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                       setScanMode('single');
                     }}
                     aria-pressed={scanMode === 'single'}
-                    className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-colors cursor-pointer ${
-                      scanMode === 'single'
-                        ? 'bg-emerald-600 border-emerald-500 text-white shadow-md'
-                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
-                    }`}
+                    className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-colors cursor-pointer ${scanMode === 'single'
+                      ? 'bg-emerald-600 border-emerald-500 text-white shadow-md'
+                      : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+                      }`}
                   >
                     Modo Individual (1 alumno)
                   </button>
