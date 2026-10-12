@@ -4,12 +4,12 @@ import { TeacherCourse } from '../../types';
 import { attendanceStore, AttendanceRecord } from '../../services/attendanceStore';
 import { supabase, fetchActiveSessionFromSupabase, ensureUserInSupabase } from '../../services/supabaseClient';
 import { decodeQrFromImageFile } from '../../utils/qrDecoder';
-import { 
-  Camera, CameraOff, X, CheckCircle2, AlertCircle, 
-  Volume2, VolumeX, RefreshCw, UserCheck, 
-  Zap, Search, ShieldCheck, Upload, ArrowRight, Check, 
-  Loader2, Download, Clock, Calendar, 
-  FileSpreadsheet, UserX 
+import {
+  Camera, CameraOff, X, CheckCircle2, AlertCircle,
+  Volume2, VolumeX, RefreshCw, UserCheck,
+  Zap, Search, ShieldCheck, Upload, ArrowRight, Check,
+  Loader2, Download, Clock, Calendar,
+  FileSpreadsheet, UserX
 } from 'lucide-react';
 
 interface TeacherQRScannerModalProps {
@@ -42,6 +42,8 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
 }) => {
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const isCooldownActive = useRef(false);
+  const cooldownTimerRef = useRef<number | null>(null);
 
   const [activeCourseId, setActiveCourseId] = useState<string>(selectedCourse.id);
   const [activeSchedule, setActiveSchedule] = useState<string>(initialSchedule);
@@ -65,6 +67,7 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
     studentName: string;
     matricula: string;
     hora: string;
+    mensaje?: string;
   } | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
@@ -129,6 +132,8 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
         stopCamera();
         if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
         if (scanToastTimerRef.current) clearTimeout(scanToastTimerRef.current);
+        if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+        isCooldownActive.current = false;
       };
     } else {
       stopCamera();
@@ -136,10 +141,16 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
       setShowSummaryScreen(false);
       setScanWarningToast(null);
       setConfirmSaveSuccess(false);
+      if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+      isCooldownActive.current = false;
     }
   }, [isOpen, currentCourse.id]);
 
   const stopCamera = async () => {
+    if (cooldownTimerRef.current) {
+      clearTimeout(cooldownTimerRef.current);
+    }
+    isCooldownActive.current = false;
     if (html5QrCodeRef.current) {
       try {
         if (html5QrCodeRef.current.isScanning) {
@@ -166,7 +177,7 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
             await html5QrCodeRef.current.stop();
           }
           html5QrCodeRef.current.clear();
-        } catch {}
+        } catch { }
         html5QrCodeRef.current = null;
       }
 
@@ -199,7 +210,7 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
           cameraConstraints,
           config,
           (decodedText) => handleSuccessScan(decodedText),
-          () => {}
+          () => { }
         );
       } catch (advancedConstraintErr) {
         console.warn("Reintentando cámara con configuración básica:", advancedConstraintErr);
@@ -212,7 +223,7 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
             disableFlip: false,
           },
           (decodedText) => handleSuccessScan(decodedText),
-          () => {}
+          () => { }
         );
       }
       setCameraActive(true);
@@ -226,13 +237,30 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
   };
 
   const handleSuccessScan = (decodedText: string) => {
+    // Si el enfriamiento está activo, ignorar la lectura inmediatamente
+    if (isCooldownActive.current) {
+      return;
+    }
+    // Bloquear lecturas secundarias inmediatas
+    isCooldownActive.current = true;
+
     console.log("QR Detectado:", decodedText);
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try {
         navigator.vibrate(100);
-      } catch {}
+      } catch { }
     }
+
+    // Procesar la asistencia del alumno normalmente
     handleCodeScanned(decodedText);
+
+    // Iniciar temporizador de 3000ms para permitir la lectura del siguiente alumno
+    if (cooldownTimerRef.current) {
+      clearTimeout(cooldownTimerRef.current);
+    }
+    cooldownTimerRef.current = window.setTimeout(() => {
+      isCooldownActive.current = false;
+    }, 3000);
   };
 
   const toggleFacingMode = async () => {
@@ -262,7 +290,7 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
       gain.connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.15);
-    } catch {}
+    } catch { }
   };
 
   const handleCodeScanned = (rawCode: string, isFromUpload = false) => {
@@ -360,10 +388,11 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
           studentName,
           matricula,
           hora: horaReg,
+          mensaje: 'Alumno registrado. Espere un momento...',
         });
         toastTimerRef.current = window.setTimeout(() => {
           setSequentialToast(null);
-        }, 2800);
+        }, 3000);
       } else {
         setSuccessData({
           studentName,
@@ -521,7 +550,7 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
         className="hidden"
       />
       <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden border border-slate-200 flex flex-col max-h-[94vh]">
-        
+
         {/* Header */}
         <div className="bg-slate-900 text-white px-5 py-4 flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
@@ -620,22 +649,20 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setSummaryFilter('todos')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                    summaryFilter === 'todos'
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer ${summaryFilter === 'todos'
                       ? 'bg-slate-900 text-white shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                    }`}
                 >
                   Todos ({allSummaryList.length})
                 </button>
                 <button
                   type="button"
                   onClick={() => setSummaryFilter('presentes')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    summaryFilter === 'presentes'
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${summaryFilter === 'presentes'
                       ? 'bg-emerald-600 text-white shadow-xs'
                       : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
-                  }`}
+                    }`}
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>Presentes ({presentList.length})</span>
@@ -643,11 +670,10 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setSummaryFilter('ausentes')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                    summaryFilter === 'ausentes'
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${summaryFilter === 'ausentes'
                       ? 'bg-rose-600 text-white shadow-xs'
                       : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
-                  }`}
+                    }`}
                 >
                   <UserX className="w-3.5 h-3.5" />
                   <span>Faltas ({absentList.length})</span>
@@ -820,7 +846,7 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                 </div>
 
                 <div className="relative rounded-2xl bg-black overflow-hidden flex flex-col items-center justify-center shadow-inner border-2 border-slate-800 w-full min-h-64">
-                  <div 
+                  <div
                     id="reader-container"
                     className="w-full h-64 bg-black rounded-lg overflow-hidden [&_video]:w-full [&_video]:h-full [&_video]:object-cover"
                   />
@@ -897,7 +923,7 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                             </div>
                             <div className="min-w-0">
                               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-200 block">
-                                Entrada Registrada
+                                {sequentialToast.mensaje || 'Alumno registrado. Espere un momento...'}
                               </span>
                               <h4 className="text-sm font-extrabold text-white truncate">
                                 {sequentialToast.studentName}
