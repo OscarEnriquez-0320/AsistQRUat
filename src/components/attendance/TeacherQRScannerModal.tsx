@@ -850,13 +850,13 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                   </div>
                 </div>
 
-                <div className="relative rounded-2xl bg-black overflow-hidden flex flex-col items-center justify-center shadow-inner border-2 border-slate-800 w-full min-h-64">
+                <div className="relative rounded-2xl bg-black overflow-hidden flex flex-col items-center justify-center shadow-inner border-2 border-slate-800 w-full min-h-60 sm:min-h-64">
                   <div
                     id="reader-container"
-                    className="w-full h-64 bg-black rounded-lg overflow-hidden [&_video]:w-full [&_video]:h-full [&_video]:object-cover"
+                    className="w-full h-60 sm:h-64 bg-black rounded-lg overflow-hidden [&_video]:w-full [&_video]:h-full [&_video]:max-h-60 sm:[&_video]:max-h-64 [&_video]:object-cover"
                   />
 
-                  {showSuccessScreen && successData ? (
+                  {showSuccessScreen && successData && scanMode === 'single' ? (
                     <div className="absolute inset-0 z-30 bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white p-6 flex flex-col items-center justify-center text-center animate-in zoom-in-95 duration-300 shadow-2xl">
                       <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/20 border-4 border-white flex items-center justify-center text-white mb-3 shadow-[0_0_35px_rgba(255,255,255,0.4)] animate-bounce">
                         <Check className="w-12 h-12 sm:w-14 sm:h-14 stroke-[3.5]" />
@@ -880,18 +880,6 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                           {successData.materia} ({successData.grupo})
                         </p>
                       </div>
-                      {scanMode === 'continuous' && (
-                        <div className="mt-5 flex items-center justify-center">
-                          <button
-                            type="button"
-                            onClick={() => setShowSuccessScreen(false)}
-                            className="px-5 py-2.5 bg-white text-emerald-900 font-extrabold text-xs rounded-xl shadow-lg hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer"
-                          >
-                            <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                            <span>Continuar Escaneando</span>
-                          </button>
-                        </div>
-                      )}
                     </div>
                   ) : null}
 
@@ -919,27 +907,6 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                           >
                             <X className="w-4 h-4" />
                           </button>
-                        </div>
-                      )}
-
-                      {sequentialToast && (
-                        <div className="absolute top-3 inset-x-3 z-20 bg-emerald-700/95 backdrop-blur-md text-white p-3 rounded-2xl shadow-2xl border-2 border-emerald-300 flex items-center justify-between animate-in slide-in-from-top-3 duration-200">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-8 h-8 rounded-full bg-white text-emerald-800 flex items-center justify-center shrink-0 shadow-md">
-                              <Check className="w-5 h-5 stroke-[3.5]" />
-                            </div>
-                            <div className="min-w-0">
-                              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-200 block">
-                                {sequentialToast.mensaje || 'Alumno registrado. Siguiente...'}
-                              </span>
-                              <h4 className="text-sm font-extrabold text-white truncate">
-                                {sequentialToast.studentName}
-                              </h4>
-                              <span className="text-[11px] font-mono text-emerald-100">
-                                Matrícula: {sequentialToast.matricula} · {sequentialToast.hora}
-                              </span>
-                            </div>
-                          </div>
                         </div>
                       )}
 
@@ -1021,6 +988,19 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                     </div>
                   )}
                 </div>
+
+                {cameraActive && scanMode === 'continuous' && sequentialToast && (
+                  <div className="pointer-events-none flex justify-center" aria-live="polite">
+                    <div className="flex max-w-full items-center gap-2 rounded-full border border-emerald-300 bg-emerald-800 px-3 py-2 text-xs font-semibold text-white shadow-lg animate-in slide-in-from-top-3 duration-200">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-sm font-black text-emerald-700">
+                        ✓
+                      </span>
+                      <span className="truncate">
+                        {sequentialToast.studentName} - Registrado · {sequentialToast.hora}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
