@@ -238,78 +238,154 @@ export const StudentQRScannerModal: React.FC<StudentQRScannerModalProps> = ({
     }
   };
 
+  const parseScannedClassQR = (raw: string): { token: string; sessionId?: string } => {
+    const rawClean = raw.trim();
+    let token = rawClean;
+    let sessionId: string | undefined;
+
+    const getField = (value: Record<string, unknown>, names: string[]) => {
+      const normalized = Object.fromEntries(
+        Object.entries(value).map(([key, fieldValue]) => [key.toLowerCase().replace(/[^a-z0-9]/g, ''), fieldValue])
+      );
+      const field = names.map((name) => normalized[name]).find((candidate) => candidate !== undefined && candidate !== null);
+      return typeof field === 'string' || typeof field === 'number' ? String(field).trim() : '';
+    };
+
+    try {
+      const jsonStart = rawClean.indexOf('{');
+      const jsonEnd = rawClean.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd > jsonStart) {
+        const parsed: unknown = JSON.parse(rawClean.substring(jsonStart, jsonEnd + 1));
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          const data = parsed as Record<string, unknown>;
+          token = getField(data, ['token', 'tokenactual', 'dynamictoken', 'currentpin', 'pin', 'pinactual']);
+          sessionId = getField(data, ['sessionid', 'sesionid', 'classsessionid']) || undefined;
+        }
+      }
+    } catch {
+      // Continue parsing other supported QR payload formats.
+    }
+
+    if (!token || token === rawClean) {
+      try {
+        const url = new URL(rawClean);
+        const params = url.searchParams;
+        token = params.get('token') || params.get('token_actual') || params.get('dynamic_token')
+          || params.get('current_pin') || params.get('pin') || params.get('pin_actual') || token;
+        sessionId = params.get('session_id') || params.get('sessionId') || params.get('sesion_id') || sessionId;
+      } catch {
+        const query = rawClean.includes('?') ? rawClean.slice(rawClean.indexOf('?') + 1) : rawClean;
+        const params = new URLSearchParams(query);
+        token = params.get('token') || params.get('token_actual') || params.get('dynamic_token')
+          || params.get('current_pin') || params.get('pin') || params.get('pin_actual') || token;
+        sessionId = params.get('session_id') || params.get('sessionId') || params.get('sesion_id') || sessionId;
+      }
+    }
+
+    if (!sessionId && /[|,]/.test(rawClean)) {
+      const parts = rawClean.split(/[|,]/).map((part) => part.trim()).filter(Boolean);
+      if (parts.length >= 3) {
+        sessionId = parts[parts.length - 2];
+        token = parts[parts.length - 1];
+      }
+    }
+
+    if (rawClean.includes('UAT-DYN-')) {
+      const match = rawClean.match(/UAT-DYN-[A-Z0-9]+-[A-Z0-9]+/i);
+      if (match) token = match[0].trim();
+    } else if (!sessionId) {
+      const parts = rawClean.split('-').map((part) => part.trim()).filter(Boolean);
+      if (parts.length === 3) {
+        sessionId = parts[1];
+        token = parts[2];
+      }
+    }
+
+    return { token: token.trim(), sessionId };
+  };
+
   const handleScannedClassQR = (raw: string, isFromUpload = false) => {
     const now = Date.now();
     if (!isFromUpload && lastScannedCodeRef.current.code === raw && now - lastScannedCodeRef.current.time < 2000) {
       return;
     }
     lastScannedCodeRef.current = { code: raw, time: now };
-    const rawClean = raw.trim();
-    let tokenDecodificado = rawClean;
-
-    if (rawClean.startsWith('UAT-DYN-') || rawClean.includes('UAT-DYN-')) {
-      const match = rawClean.match(/UAT-DYN-[A-Z0-9]+-[A-Z0-9]+/i);
-      tokenDecodificado = match ? match[0].trim() : rawClean;
-    } else if (rawClean.includes('{') && rawClean.includes('}')) {
-      try {
-        const jsonStart = rawClean.indexOf('{');
-        const jsonEnd = rawClean.lastIndexOf('}');
-        const jsonSubstring = rawClean.substring(jsonStart, jsonEnd + 1);
-        const parsed = JSON.parse(jsonSubstring);
-        if (parsed.token) tokenDecodificado = String(parsed.token).trim();
-        else if (parsed.tokenActual) tokenDecodificado = String(parsed.tokenActual).trim();
-        else if (parsed.pin) tokenDecodificado = String(parsed.pin).trim();
-        else if (parsed.pinActual) tokenDecodificado = String(parsed.pinActual).trim();
-        else if (parsed.matricula) tokenDecodificado = String(parsed.matricula).trim();
-      } catch {
-        tokenDecodificado = rawClean;
-      }
-    } else {
-      tokenDecodificado = rawClean;
+    const { token, sessionId } = parseScannedClassQR(raw);
+    if (!token) {
+      setFeedbackError('Código expirado o inválido, intenta con el PIN de pantalla');
+      return;
     }
-
-    validateAndRecord(tokenDecodificado);
+    void validateAndRecord(token, sessionId);
   };
 
-  const validateAndRecord = async (tokenOrPin: string) => {
+  const validateAndRecord = async (tokenOrPin: string, expectedSessionId?: string) => {
     setFeedbackError('');
-    const token = tokenOrPin.trim();
+    const token = tokenOrPin.trim().toUpperCase();
+    const invalidCodeMessage = 'Código expirado o inválido, intenta con el PIN de pantalla';
 
     try {
+      const activeSessionQuery = supabase
+        .from('sesiones_clase')
+        .select('id, token_actual, pin_actual')
+        .eq('activa', true);
+      const { data: activeSession, error: sessionError } = expectedSessionId
+        ? await activeSessionQuery.eq('id', expectedSessionId).maybeSingle()
+        : await activeSessionQuery.order('creado_en', { ascending: false }).limit(1).maybeSingle();
+
+      if (sessionError) {
+        throw new Error(`No se pudo consultar la sesión activa: ${sessionError.message}`);
+      }
+
+      const activeToken = (activeSession?.token_actual || '').trim().toUpperCase();
+      const activePin = (activeSession?.pin_actual || '').trim().toUpperCase();
+      if (!activeSession || (expectedSessionId && activeSession.id !== expectedSessionId) || (token !== activeToken && token !== activePin)) {
+        setFeedbackError(invalidCodeMessage);
+        return;
+      }
+
       const sbResult = await validateAndRecordAttendanceInSupabase({
         tokenOrPin: token,
         studentMatricula: currentUser.identificadorInstitucional,
         studentNombre: `${currentUser.nombre} ${currentUser.apellidos}`,
       });
       if (!sbResult.success && !sbResult.isDuplicate) {
-        setFeedbackError(sbResult.message);
+        setFeedbackError(invalidCodeMessage);
         return;
       }
-    } catch (sbErr) {
-      console.warn('Advertencia en validación con Supabase:', sbErr);
-    }
 
-    const res = attendanceStore.recordStudentSelfAttendance({
-      student: currentUser,
-      tokenOrPin: token,
-      forceFresh: false,
-    });
-
-    if (res.success && res.record) {
-      playBeep();
-      setSuccessData({
-        materia: res.record.nombreMateria,
-        codigo: res.record.codigoMateria,
-        grupo: res.record.grupo,
-        hora: res.record.hora,
-        estatus: 'Presente',
-      });
-      setShowSuccessScreen(true);
-      if (onAttendanceSuccess) {
-        onAttendanceSuccess();
+      if (sbResult.record?.sesion_id && sbResult.record.sesion_id !== activeSession.id) {
+        setFeedbackError(invalidCodeMessage);
+        return;
       }
-    } else {
-      setFeedbackError(res.message);
+
+      const res = attendanceStore.recordStudentSelfAttendance({
+        student: currentUser,
+        tokenOrPin: token,
+        forceFresh: false,
+      });
+
+      if (sbResult.success || (res.success && res.record)) {
+        const localSession = attendanceStore.getActiveSession();
+        playBeep();
+        setSuccessData({
+          materia: res.record?.nombreMateria || localSession?.nombreMateria || 'Materia Oficial UAT',
+          codigo: res.record?.codigoMateria || localSession?.codigoMateria || '',
+          grupo: res.record?.grupo || localSession?.grupo || '',
+          hora: res.record?.hora || (sbResult.record?.registrado_en
+            ? new Date(sbResult.record.registrado_en).toLocaleTimeString('es-MX')
+            : new Date().toLocaleTimeString('es-MX')),
+          estatus: 'Presente',
+        });
+        setShowSuccessScreen(true);
+        if (onAttendanceSuccess) {
+          onAttendanceSuccess();
+        }
+      } else {
+        setFeedbackError(res.message);
+      }
+    } catch (sbErr) {
+      console.error('Error al validar asistencia con Supabase:', sbErr);
+      setFeedbackError('No se pudo validar el código con la sesión activa. Intenta nuevamente con el PIN de pantalla.');
     }
   };
 
@@ -340,8 +416,9 @@ export const StudentQRScannerModal: React.FC<StudentQRScannerModalProps> = ({
 
   const handleManualPin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pinInput.trim()) return;
-    validateAndRecord(pinInput.trim());
+    const cleanPin = pinInput.trim().toUpperCase();
+    if (!cleanPin) return;
+    void validateAndRecord(cleanPin);
     setPinInput('');
   };
 
