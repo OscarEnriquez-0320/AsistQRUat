@@ -47,6 +47,8 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
 
   const [activeCourseId, setActiveCourseId] = useState<string>(selectedCourse.id);
   const [activeSchedule, setActiveSchedule] = useState<string>(initialSchedule);
+  const [scanMode, setScanMode] = useState<'single' | 'continuous'>('continuous');
+  const scanModeRef = useRef<'single' | 'continuous'>('continuous');
   const [cameraActive, setCameraActive] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string>('');
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
@@ -236,12 +238,10 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
     }
   };
 
-  const handleSuccessScan = (decodedText: string) => {
-    // Si el enfriamiento está activo, ignorar la lectura inmediatamente
+  const handleSuccessScan = async (decodedText: string) => {
     if (isCooldownActive.current) {
       return;
     }
-    // Bloquear lecturas secundarias inmediatas
     isCooldownActive.current = true;
 
     console.log("QR Detectado:", decodedText);
@@ -251,16 +251,20 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
       } catch { }
     }
 
-    // Procesar la asistencia del alumno normalmente
-    handleCodeScanned(decodedText);
+    const wasRegistered = await handleCodeScanned(decodedText);
 
-    // Iniciar temporizador de 3000ms para permitir la lectura del siguiente alumno
     if (cooldownTimerRef.current) {
       clearTimeout(cooldownTimerRef.current);
     }
-    cooldownTimerRef.current = window.setTimeout(() => {
-      isCooldownActive.current = false;
-    }, 3000);
+
+    if (scanModeRef.current === 'single' && wasRegistered) {
+      await stopCamera();
+      window.setTimeout(onClose, 1800);
+    } else {
+      cooldownTimerRef.current = window.setTimeout(() => {
+        isCooldownActive.current = false;
+      }, 3000);
+    }
   };
 
   const toggleFacingMode = async () => {
@@ -293,10 +297,10 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
     } catch { }
   };
 
-  const handleCodeScanned = (rawCode: string, isFromUpload = false) => {
+  const handleCodeScanned = async (rawCode: string, isFromUpload = false): Promise<boolean> => {
     const now = Date.now();
     if (!isFromUpload && lastScannedCodeRef.current.code === rawCode && now - lastScannedCodeRef.current.time < 2000) {
-      return;
+      return false;
     }
     lastScannedCodeRef.current = { code: rawCode, time: now };
 
@@ -333,14 +337,14 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
         hora: new Date().toLocaleTimeString('es-MX'),
         message: errorMsg,
       });
-      return;
+      return false;
     }
 
     setScanWarningToast(null);
-    processMatricula(matriculaFinal, false);
+    return processMatricula(matriculaFinal, false);
   };
 
-  const processMatricula = async (matricula: string, forceFresh = false) => {
+  const processMatricula = async (matricula: string, forceFresh = false): Promise<boolean> => {
     const res = attendanceStore.recordStudentEntryByTeacher({
       matricula,
       courseId: currentCourse.id,
@@ -382,13 +386,13 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
 
     if (res.success) {
       playBeep();
-      if (cameraActive) {
+      if (cameraActive && scanModeRef.current === 'continuous') {
         if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
         setSequentialToast({
           studentName,
           matricula,
           hora: horaReg,
-          mensaje: 'Alumno registrado. Espere un momento...',
+          mensaje: 'Alumno registrado. Siguiente...',
         });
         toastTimerRef.current = window.setTimeout(() => {
           setSequentialToast(null);
@@ -405,6 +409,7 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
       }
     }
     refreshLogs();
+    return res.success;
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -419,7 +424,7 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
         setIsDecodingFile(false);
         return;
       }
-      handleCodeScanned(decodedData, true);
+      await handleCodeScanned(decodedData, true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al procesar la imagen seleccionada.';
       setFileError(msg);
@@ -875,16 +880,18 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                           {successData.materia} ({successData.grupo})
                         </p>
                       </div>
-                      <div className="mt-5 flex items-center justify-center">
-                        <button
-                          type="button"
-                          onClick={() => setShowSuccessScreen(false)}
-                          className="px-5 py-2.5 bg-white text-emerald-900 font-extrabold text-xs rounded-xl shadow-lg hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                          <span>Continuar Escaneando</span>
-                        </button>
-                      </div>
+                      {scanMode === 'continuous' && (
+                        <div className="mt-5 flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={() => setShowSuccessScreen(false)}
+                            className="px-5 py-2.5 bg-white text-emerald-900 font-extrabold text-xs rounded-xl shadow-lg hover:bg-emerald-50 transition-colors flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                            <span>Continuar Escaneando</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : null}
 
@@ -923,7 +930,7 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                             </div>
                             <div className="min-w-0">
                               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-200 block">
-                                {sequentialToast.mensaje || 'Alumno registrado. Espere un momento...'}
+                                {sequentialToast.mensaje || 'Alumno registrado. Siguiente...'}
                               </span>
                               <h4 className="text-sm font-extrabold text-white truncate">
                                 {sequentialToast.studentName}
@@ -1013,6 +1020,39 @@ export const TeacherQRScannerModal: React.FC<TeacherQRScannerModalProps> = ({
                       </div>
                     </div>
                   )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      scanModeRef.current = 'continuous';
+                      setScanMode('continuous');
+                    }}
+                    aria-pressed={scanMode === 'continuous'}
+                    className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-colors cursor-pointer ${
+                      scanMode === 'continuous'
+                        ? 'bg-emerald-600 border-emerald-500 text-white shadow-md'
+                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    Modo Continuo (Múltiples alumnos)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      scanModeRef.current = 'single';
+                      setScanMode('single');
+                    }}
+                    aria-pressed={scanMode === 'single'}
+                    className={`px-4 py-2.5 text-xs font-bold rounded-xl border transition-colors cursor-pointer ${
+                      scanMode === 'single'
+                        ? 'bg-emerald-600 border-emerald-500 text-white shadow-md'
+                        : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    Modo Individual (1 alumno)
+                  </button>
                 </div>
 
                 {fileError && (
