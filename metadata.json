@@ -1,0 +1,6 @@
+{
+  "name": "Portal Institucional UAT - Autenticación y Asistencia por QR",
+  "description": "Sistema institucional de la Universidad Autónoma de Tamaulipas (UAT) con registro de alumnos y docentes, autenticación con roles diferenciados y asistencia por QR.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
