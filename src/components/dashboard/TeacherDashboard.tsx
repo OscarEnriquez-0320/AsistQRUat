@@ -210,7 +210,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <TeacherQRScannerModal
         isOpen={isScannerModalOpen}
         onClose={() => setIsScannerModalOpen(false)}
@@ -239,7 +239,7 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       />
 
       {/* Welcome Banner */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      <div className="order-0 bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="flex items-start gap-4">
           <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200 p-2 flex items-center justify-center shrink-0 shadow-2xs">
             <UATLogo size="sm" />
@@ -296,7 +296,11 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
 
       {/* TAB 1: GRUPOS */}
       {(activeTab === 'grupos' || activeTab === 'inicio' || activeTab === 'calificaciones') && (
-        <div className="space-y-6">
+        <details open={activeTab !== 'inicio'} className="order-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+          <summary className="cursor-pointer text-sm font-bold text-slate-900">
+            Mis Grupos y Evaluaciones
+          </summary>
+          <div className="space-y-6 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {courses.map((course) => {
               const isSelected = course.id === selectedCourseId;
@@ -418,12 +422,13 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
               </table>
             </div>
           </div>
-        </div>
+          </div>
+        </details>
       )}
 
       {/* TAB 2: ASISTENCIA QR */}
-      {activeTab === 'asistencia-qr' && (
-        <div className="space-y-6">
+      {(activeTab === 'asistencia-qr' || activeTab === 'inicio') && (
+        <div className="order-1 space-y-6">
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
               <div>
@@ -646,8 +651,8 @@ export const TeacherDashboard: React.FC<TeacherDashboardProps> = ({
       )}
 
       {/* TAB 3: CREDENCIAL DOCENTE */}
-      {activeTab === 'credencial' && (
-        <div className="max-w-xl mx-auto space-y-4">
+      {(activeTab === 'credencial' || activeTab === 'inicio' || activeTab === 'asistencia-qr') && (
+        <div className="order-2 max-w-xl mx-auto w-full space-y-4">
           <div className="text-center">
             <h2 className="text-lg font-bold text-slate-900">Credencial Oficial de Personal Académico UAT</h2>
             <p className="text-xs text-slate-500">Acreditación institucional oficial de la Universidad Autónoma de Tamaulipas</p>

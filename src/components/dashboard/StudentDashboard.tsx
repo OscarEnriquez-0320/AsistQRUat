@@ -320,7 +320,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <JOptionPaneModal
         isOpen={isJOptionPaneOpen}
         onClose={() => setIsJOptionPaneOpen(false)}
@@ -434,7 +434,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       />
 
       {/* Welcome Banner Institucional UAT */}
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="order-0 bg-white border border-slate-200 rounded-xl p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 p-1 flex items-center justify-center shrink-0">
             <UATLogo size="sm" />
@@ -484,7 +484,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
       {/* TAB 1: RESUMEN ACADÉMICO */}
       {(activeTab === 'resumen' || activeTab === 'inicio') && (
-        <div className="space-y-6">
+        <details open={activeTab === 'resumen'} className="order-3 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+          <summary className="cursor-pointer text-sm font-bold text-slate-900">
+            Resumen Académico
+          </summary>
+          <div className="space-y-6 pt-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-2xs">
               <div className="flex items-center justify-between text-slate-500 mb-2">
@@ -575,12 +579,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               </table>
             </div>
           </div>
-        </div>
+          </div>
+        </details>
       )}
 
       {/* TAB 2: ASISTENCIA POR QR */}
-      {activeTab === 'asistencia-qr' && (
-        <div className="space-y-6">
+      {(activeTab === 'asistencia-qr' || activeTab === 'inicio') && (
+        <div className="order-1 space-y-6">
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-5">
               <div>
@@ -862,8 +867,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       )}
 
       {/* TAB 3: MIS MATERIAS */}
-      {activeTab === 'materias' && (
-        <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs space-y-4">
+      {(activeTab === 'materias' || activeTab === 'inicio') && (
+        <details open={activeTab === 'materias'} className="order-4 rounded-xl border border-slate-200 bg-white p-4 shadow-2xs">
+          <summary className="cursor-pointer text-sm font-bold text-slate-900">
+            Mis Materias
+          </summary>
+          <div className="bg-white rounded-xl p-2 pt-4 space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
               <h2 className="text-lg font-bold text-slate-900">Detalle de Materias y Calificaciones</h2>
@@ -900,12 +909,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               </div>
             ))}
           </div>
-        </div>
+          </div>
+        </details>
       )}
 
       {/* TAB 4: CREDENCIAL DIGITAL */}
-      {activeTab === 'credencial' && (
-        <div className="max-w-xl mx-auto space-y-4">
+      {(activeTab === 'credencial' || activeTab === 'inicio' || activeTab === 'asistencia-qr') && (
+        <div className="order-2 max-w-xl mx-auto w-full space-y-4">
           <div className="text-center">
             <h2 className="text-lg font-bold text-slate-900">Credencial Digital del Estudiante UAT</h2>
             <p className="text-xs text-slate-500">Documento de identificación académica oficial de la Universidad Autónoma de Tamaulipas</p>

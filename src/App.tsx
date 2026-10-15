@@ -34,10 +34,10 @@ export default function App() {
   const setDefaultTabForRole = (role: User['rol']) => {
     switch (role) {
       case 'alumno':
-        setActiveTab('resumen');
+        setActiveTab('inicio');
         break;
       case 'profesor':
-        setActiveTab('grupos');
+        setActiveTab('inicio');
         break;
       case 'administrador':
         setActiveTab('usuarios');

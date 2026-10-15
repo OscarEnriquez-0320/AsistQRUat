@@ -23,7 +23,7 @@ export const UATLogo: React.FC<UATLogoProps> = ({
     '2xl': { w: 240, h: 125 },
   }[size];
 
-  const logoSrc = customImagePath || '/images/logo-uat.png';
+  const logoSrc = customImagePath || '/images/UAT Vertical.png';
 
   if (!imageError) {
     if (variant === 'horizontal') {

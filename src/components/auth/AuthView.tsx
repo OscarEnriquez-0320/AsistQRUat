@@ -608,7 +608,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess }) => {
             {/* Logos Institucionales */}
             <div className="flex flex-col items-center justify-center p-4 sm:p-5 bg-white rounded-2xl border border-slate-200/90 shadow-2xs mb-4 text-center">
               <div className="flex items-center justify-center gap-4 sm:gap-6 w-full my-1">
-                <img src="/images/logo-uat.png" alt="Logo UAT" className="h-16 w-auto object-contain" />
+                <img src="/images/UAT Vertical.png" alt="Logo UAT" className="h-16 w-auto object-contain" />
                 <div className="h-12 sm:h-14 w-px bg-slate-200 shrink-0" aria-hidden="true" />
                 <img src="/images/logo-fit.png" alt="Logo FIT" className="h-16 w-auto object-contain" />
               </div>

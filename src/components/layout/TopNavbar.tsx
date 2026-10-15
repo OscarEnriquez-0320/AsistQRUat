@@ -73,13 +73,13 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
           <div className="flex items-center gap-3 shrink-0 min-w-0">
             <button
               type="button"
-              onClick={() => setActiveTab(navLinks[0]?.id || 'inicio')}
+              onClick={() => setActiveTab('inicio')}
               className="flex items-center gap-3 text-left focus:outline-none group select-none cursor-pointer"
             >
               <div className="flex items-center gap-2">
                 <div className="w-12 h-10 sm:h-11 rounded-xl bg-white border border-slate-200 shadow-2xs flex items-center justify-center p-1 shrink-0">
                   <img
-                    src="/images/logo-uat.png"
+                    src="/images/UAT Vertical.png"
                     alt="Universidad Autónoma de Tamaulipas"
                     className="w-full h-full object-contain"
                   />
